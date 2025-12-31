@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Flappy Banana Troll Pro 🍌😂</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #000;
+    font-family: Arial, sans-serif;
+}
+
+canvas {
+    display: block;
+    background: transparent;
+    position: relative;
+    z-index: 2;
+}
+
+/* Background Emoji Rain */
+.emoji {
+    position: fixed;
+    top: -50px;
+    font-size: 30px;
+    pointer-events: none;
+    animation: fall linear forwards;
+    z-index: 1;
+}
+
+@keyframes fall {
+    to {
+        transform: translateY(110vh);
+        opacity: 0;
+    }
+}
+
+/* Fart Emoji (Tilted) */
+.fart {
+    position: absolute;
+    font-size: 28px;
+    pointer-events: none;
+    z-index: 3;
+    animation: fartFly 0.8s ease-out forwards;
+}
+
+@keyframes fartFly {
+    0% {
+        transform: translateY(0) rotate(var(--angle));
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(30px) rotate(calc(var(--angle) + 20deg));
+        opacity: 0;
+    }
+}
+
+/* Options */
+#options {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background: rgba(0,0,0,0.75);
+    color: #fff;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    z-index: 20;
+}
+
+/* Game Over */
+#gameOver {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    color: #fff;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 30;
+    text-align: center;
+}
+
+#outImages {
+    display: flex;
+    gap: 20px;
+    margin: 10px 0;
+}
+
+#outImages img {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+}
+
+#gameOver button {
+    margin-top: 15px;
+    padding: 12px 30px;
+    font-size: 18px;
+    border: none;
+    border-radius: 10px;
+    background: orange;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#promo {
+    position: fixed;
+    bottom: 6px;
+    width: 100%;
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    color: #fff;
+    z-index: 25;
+}
+</style>
+</head>
+
+<body>
+
+<div id="options">
+    <label><input type="checkbox" id="optFart" checked> Jump Fart</label><br>
+    <label><input type="checkbox" id="optShake" checked> Screen Shake</label><br>
+    <label><input type="checkbox" id="optBanana" checked> Random Banana Size</label><br>
+    <label><input type="checkbox" id="optPraise" checked> Fake Praise</label>
+</div>
+
+<canvas id="game"></canvas>
+
+<div id="gameOver">
+    <h1>😂 Khayega kela 🍌</h1>
+    <div id="outImages">
+        <img src="friend.jpeg">
+        <img src="banana.jpeg">
+    </div>
+    <p>
+        Follow for trolling games 👇<br>
+        <a href="https://www.instagram.com/sujal_surprise_links" target="_blank" style="color:#00aced;font-weight:bold;">
+            @sujal_surprise_links
+        </a>
+    </p>
+    <button onclick="restart()">Restart</button>
+</div>
+
+<div id="promo">Games by @sujal_surprise_links ❤️</div>
+
+<audio id="bgMusic" src="background.mp3" loop></audio>
+<audio id="outMusic" src="kelejudgaye.mp3"></audio>
+<audio id="fartSound" src="fart.mp3"></audio>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function resize(){
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+}
+resize();
+addEventListener("resize", resize);
+
+/* Images */
+const birdImg = new Image();
+birdImg.src = "friend.jpeg";
+const bananaImg = new Image();
+bananaImg.src = "banana.jpeg";
+
+/* Audio */
+const bgMusic = document.getElementById("bgMusic");
+const outMusic = document.getElementById("outMusic");
+const fartSound = document.getElementById("fartSound");
+const gameOverUI = document.getElementById("gameOver");
+
+/* Options */
+const optFart = document.getElementById("optFart");
+const optShake = document.getElementById("optShake");
+const optBanana = document.getElementById("optBanana");
+const optPraise = document.getElementById("optPraise");
+
+/* Game Vars */
+let bird = {x:80,y:canvas.height/2,w:60,h:60,v:0};
+let gravity = 0.4;
+let jumpPower = -8;
+let bananas = [];
+let frame = 0;
+let running = true;
+
+/* Background Emoji Rain */
+function emojiRain(){
+    if(!running) return;
+    const e = document.createElement("div");
+    e.className = "emoji";
+    e.innerText = Math.random() > 0.5 ? "💋" : "👄";
+    e.style.left = Math.random()*innerWidth + "px";
+    e.style.fontSize = Math.random()*20 + 20 + "px";
+    e.style.animationDuration = Math.random()*3 + 2 + "s";
+    document.body.appendChild(e);
+    setTimeout(()=>e.remove(),5000);
+}
+setInterval(emojiRain,200);
+
+/* Fart Emoji on Jump (Tilted) */
+function fartEmoji(){
+    if(!optFart.checked) return;
+
+    const f = document.createElement("div");
+    f.className = "fart";
+    f.innerText = "💨";
+
+    const angle = Math.random() * 60 - 30; // tilt
+    f.style.setProperty("--angle", angle + "deg");
+
+    f.style.left = (bird.x + bird.w/2) + "px";
+    f.style.top = (bird.y + bird.h) + "px";
+
+    document.body.appendChild(f);
+    setTimeout(()=>f.remove(),800);
+}
+
+/* Jump */
+function jump(){
+    if(!running) return;
+    bird.v = jumpPower;
+    fartEmoji();
+    fartSound.currentTime = 0;
+    fartSound.play();
+}
+addEventListener("click", jump);
+addEventListener("touchstart", jump);
+
+/* Banana */
+function spawnBanana(){
+    let h = optBanana.checked ? Math.random()*150+120 : 200;
+    let y = Math.random()*(canvas.height-h);
+    bananas.push({x:canvas.width,y,w:70,h});
+}
+
+function collide(a,b){
+    return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
+}
+
+/* Screen Shake */
+function screenShake(){
+    if(!optShake.checked) return;
+    canvas.style.transform="translateX(10px)";
+    setTimeout(()=>canvas.style.transform="translateX(-10px)",50);
+    setTimeout(()=>canvas.style.transform="translateX(0)",100);
+}
+
+function gameOver(){
+    if(!running) return;
+    running=false;
+    bgMusic.pause();
+    outMusic.play();
+    screenShake();
+    gameOverUI.style.display="flex";
+}
+
+function restart(){
+    bird.y=canvas.height/2;
+    bird.v=0;
+    bananas=[];
+    frame=0;
+    running=true;
+    outMusic.pause();
+    bgMusic.currentTime=0;
+    bgMusic.play();
+    gameOverUI.style.display="none";
+}
+
+addEventListener("click",()=>bgMusic.play(),{once:true});
+
+/* Game Loop */
+function loop(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    if(running){
+        bird.v+=gravity;
+        bird.y+=bird.v;
+
+        if(bird.y<0||bird.y+bird.h>canvas.height) gameOver();
+        if(frame%120===0) spawnBanana();
+
+        bananas.forEach((b,i)=>{
+            b.x-=2;
+            ctx.drawImage(bananaImg,b.x,b.y,b.w,b.h);
+            if(collide(bird,b)) gameOver();
+            if(b.x+b.w<0) bananas.splice(i,1);
+        });
+
+        ctx.drawImage(birdImg,bird.x,bird.y,bird.w,bird.h);
+
+        if(optPraise.checked && frame===300){
+            ctx.fillStyle="white";
+            ctx.font="30px Arial";
+            ctx.fillText("Tu PRO hai bhai 😎",canvas.width/2-120,80);
+        }
+        frame++;
+    }
+    requestAnimationFrame(loop);
+}
+loop();
+</script>
+
+</body>
+</html>
